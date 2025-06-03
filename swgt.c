@@ -33,6 +33,7 @@ typedef struct {
     XftColor xft_text_color, xft_active_text_color, xft_icon_color, xft_active_icon_color;
     Colormap colormap;
     Visual *visual;
+    int has_compositor;
     
     XColor bg_color, text_color, window_border_color, border_color, button_bg_color;
     XColor active_bg_color, active_text_color, active_border_color;
@@ -64,6 +65,8 @@ void init_buttons(Widget *widget);
 int get_button_at_position(Widget *widget, int x, int y);
 void toggle_button(Widget *widget, int button_index);
 void draw_text_centered_xft(Widget *widget, const char *text, int x, int y, int width, XftFont *font, XftColor *color);
+int check_compositor(Display *display);
+void set_window_opacity(Widget *widget, double opacity);
 
 void execute_command(const char *command) {
     if (!command[0]) return;
@@ -154,6 +157,9 @@ void init_widget(Widget *widget) {
     widget->screen_width = DisplayWidth(widget->display, screen);
     widget->screen_height = DisplayHeight(widget->display, screen);
     
+    // Check for compositor
+    widget->has_compositor = check_compositor(widget->display);
+    
     setup_colors(widget);
     setup_fonts(widget);
     init_buttons(widget);
@@ -194,6 +200,12 @@ void init_widget(Widget *widget) {
                 ExposureMask | ButtonPressMask | ButtonReleaseMask | StructureNotifyMask);
     
     XMapWindow(widget->display, widget->window);
+    
+    // Set window opacity after mapping if compositor is available
+    if (widget->has_compositor) {
+        set_window_opacity(widget, WINDOW_OPACITY);
+    }
+    
     XFlush(widget->display);
 }
 
@@ -403,6 +415,24 @@ void cleanup_widget(Widget *widget) {
     XFreeGC(widget->display, widget->gc);
     XDestroyWindow(widget->display, widget->window);
     XCloseDisplay(widget->display);
+}
+
+int check_compositor(Display *display) {
+    char prop_name[32];
+    snprintf(prop_name, sizeof(prop_name), "_NET_WM_CM_S%d", DefaultScreen(display));
+    Atom atom = XInternAtom(display, prop_name, False);
+    return XGetSelectionOwner(display, atom) != None;
+}
+
+void set_window_opacity(Widget *widget, double opacity) {
+    if (!widget->has_compositor) return;
+    
+    Atom atom = XInternAtom(widget->display, "_NET_WM_WINDOW_OPACITY", False);
+    if (atom != None) {
+        unsigned long opacity_value = (unsigned long)(opacity * 0xFFFFFFFF);
+        XChangeProperty(widget->display, widget->window, atom, XA_CARDINAL, 32,
+                       PropModeReplace, (unsigned char*)&opacity_value, 1);
+    }
 }
 
 int main() {

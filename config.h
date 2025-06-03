@@ -16,6 +16,18 @@
 #define HOVER_ZONE_WIDTH 10
 #define HOVER_ZONE_HEIGHT 100
 
+#define BG_COLOR        "#0d0f1c"
+#define TEXT_COLOR      "#e2e8f0"
+#define WINDOW_BORDER_COLOR "#9c98d5"
+#define BORDER_COLOR    "#252a3a"
+#define BUTTON_BG_COLOR "#151925"
+#define ACTIVE_BG_COLOR "#2a2a3a"
+#define ACTIVE_TEXT_COLOR "#c6a0f6"
+#define ACTIVE_BORDER_COLOR "#c6a0f6"
+#define PRESSED_BG_COLOR "#1a1a22"
+#define ICON_COLOR      "#fbf9fe"
+#define ACTIVE_ICON_COLOR "#c6a0f6"
+/*
 #define BG_COLOR        "#16161e"
 #define TEXT_COLOR      "#fbf9fe"
 #define WINDOW_BORDER_COLOR "#9c98d5"
@@ -27,6 +39,7 @@
 #define PRESSED_BG_COLOR "#1a1a22"
 #define ICON_COLOR      "#fbf9fe"
 #define ACTIVE_ICON_COLOR "#c6a0f6"
+*/
 
 #define ICON_FONT_NAME  "Symbols Nerd Font"
 #define ICON_FONT_SIZE  15
@@ -46,5 +59,8 @@
     {"\uf072", "Air", "rfkill block all; bluetoothctl power off", "rfkill unblock all; sleep 1; bluetoothctl power on", 0}, \
     {"\uf011", "Power", "~/code/swgt/scripts/power.sh", "", 1} \
 }
+
+// Transparency settings
+#define WINDOW_OPACITY 1
 
 #endif
