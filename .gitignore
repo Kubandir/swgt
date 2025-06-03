@@ -1,0 +1,25 @@
+# Build artifacts
+swgt
+*.o
+*.a
+*.so
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Custom scripts
+scripts/
