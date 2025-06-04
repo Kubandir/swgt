@@ -1,4 +1,4 @@
-# SWGT - Suckless Widget
+# SWGT - Simple Widget
 
 A lightweight X11 widget that displays multiple toggleable buttons with custom icons and appears when the mouse cursor reaches the right edge of the screen.
 
