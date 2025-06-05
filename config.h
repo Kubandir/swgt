@@ -66,27 +66,27 @@
 #define PAGE_0_CONFIG { \
     {"\uf0f3", "Dnd", "pkill -SIGUSR1 dunst", "pkill -SIGUSR2 dunst", 0}, \
     {"\uf185", "Night", "redshift -O 2000", "redshift -x", 0}, \
-    {"\uf072", "Air", "rfkill block all; bluetoothctl power off", "rfkill unblock all; sleep 1; bluetoothctl power on", 0}, \
-    {"\uf028", "Audio", "pactl set-sink-mute @DEFAULT_SINK@ toggle", "", 1}, \
+    {"\uf108", "Mirror", "xrandr --output HDMI-1 --same-as eDP-1 --mode 1920x1080", "", 1}, \
+    {"\uf0ae", "Work", "~/code/swgt/scripts/productivity.sh start", "~/code/swgt/scripts/productivity.sh stop", 0}, \
     {"\uf011", "Power", "~/code/swgt/scripts/power.sh", "", 1} \
 }
 
-// Page 1: Work & Productivity  
+// Page 1: Connectivity & Devices
 #define PAGE_1_CONFIG { \
-    {"\uf0ae", "Work", "~/code/swgt/scripts/productivity.sh start", "~/code/swgt/scripts/productivity.sh stop", 0}, \
-    {"\uf121", "Code", "code", "", 1}, \
-    {"\uf120", "Term", "alacritty", "", 1}, \
-    {"\uf269", "Files", "thunar", "", 1}, \
-    {"\uf0ac", "Web", "firefox", "", 1} \
+    {"\uf1eb", "Wifi", "nmcli radio wifi off", "nmcli radio wifi on", 0}, \
+    {"\uf293", "Bt", "rfkill block bluetooth", "rfkill unblock bluetooth", 0}, \
+    {"\uf028", "Audio", "pactl set-sink-mute @DEFAULT_SINK@ toggle", "", 1}, \
+    {"\uf072", "Air", "rfkill block all; bluetoothctl power off", "rfkill unblock all; sleep 1; bluetoothctl power on", 0}, \
+    {"\uf287", "Usb", "udisksctl unmount -b /dev/sda1; udisksctl power-off -b /dev/sda1", "", 1} \
 }
 
-// Page 2: Media & Entertainment
+// Page 2: (empty)
 #define PAGE_2_CONFIG { \
-    {"\uf001", "Music", "~/code/swgt/scripts/music.sh toggle", "~/code/swgt/scripts/music.sh stop", 0}, \
-    {"\uf03d", "Video", "mpv", "", 1}, \
-    {"\uf1fc", "Paint", "gimp", "", 1}, \
-    {"\uf03e", "Photo", "eog", "", 1}, \
-    {"\uf1b6", "Steam", "steam", "", 1} \
+    {"", "", "", "", 1}, \
+    {"", "", "", "", 1}, \
+    {"", "", "", "", 1}, \
+    {"", "", "", "", 1}, \
+    {"", "", "", "", 1} \
 }
 
 // Button configuration helper

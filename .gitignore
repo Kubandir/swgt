@@ -20,6 +20,3 @@ swgt
 # OS files
 .DS_Store
 Thumbs.db
-
-# Custom scripts
-scripts/
