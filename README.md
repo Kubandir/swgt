@@ -2,6 +2,8 @@
 
 A lightweight X11 widget that displays multiple pages of toggleable buttons with custom icons and appears when the mouse cursor reaches the right edge of the screen.
 
+![image](https://github.com/user-attachments/assets/2973bafc-6a92-48c4-b0b6-b7f9e6bd8e17)
+
 ## Features
 
 - **Multi-page support** with configurable navigation
