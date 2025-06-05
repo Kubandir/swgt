@@ -1,0 +1,12 @@
+Jun 05 18:22:29 arch sudo[105031]: pam_unix(sudo:auth): auth could not identify password for [hoks]
+Jun 05 18:22:37 arch sudo[105245]:     hoks : TTY=pts/5 ; PWD=/home/hoks/code/swgt ; USER=root ; COMMAND=/usr/bin/make install
+Jun 05 18:22:37 arch sudo[105245]: pam_unix(sudo:session): session opened for user root(uid=0) by hoks(uid=1000)
+Jun 05 18:22:37 arch sudo[105245]: pam_unix(sudo:session): session closed for user root
+Jun 05 18:24:32 arch sudo[107308]:     hoks : TTY=pts/5 ; PWD=/home/hoks/code/swgt ; USER=root ; COMMAND=/usr/bin/make install
+Jun 05 18:24:32 arch sudo[107308]: pam_unix(sudo:session): session opened for user root(uid=0) by hoks(uid=1000)
+Jun 05 18:24:32 arch sudo[107308]: pam_unix(sudo:session): session closed for user root
+Jun 05 18:26:44 arch sudo[110177]:     hoks : TTY=pts/5 ; PWD=/home/hoks/code/swgt ; USER=root ; COMMAND=/usr/bin/make install
+Jun 05 18:26:44 arch sudo[110177]: pam_unix(sudo:session): session opened for user root(uid=0) by hoks(uid=1000)
+Jun 05 18:26:44 arch sudo[110177]: pam_unix(sudo:session): session closed for user root
+Jun 05 18:26:55 arch systemd[887]: Starting Xfce configuration service...
+Jun 05 18:26:55 arch systemd[887]: Started Xfce configuration service.

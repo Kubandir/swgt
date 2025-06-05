@@ -49,7 +49,7 @@
 #define ICON_FONT_NAME         "Symbols Nerd Font"
 #define ICON_FONT_SIZE         15
 #define TEXT_FONT_NAME         "BigBlueTermPlus Nerd Font Mono:weight=Regular:antialias=true:hinting=true"
-#define TEXT_FONT_SIZE         10
+#define TEXT_FONT_SIZE         9
 #define PAGE_FONT_NAME         "BigBlueTermPlus Nerd Font Mono:weight=Regular:antialias=true:hinting=true"
 #define PAGE_FONT_SIZE         8
 
@@ -75,18 +75,18 @@
 #define PAGE_1_CONFIG { \
     {"\uf1eb", "Wifi", "nmcli radio wifi off", "nmcli radio wifi on", 0}, \
     {"\uf293", "Bt", "rfkill block bluetooth", "rfkill unblock bluetooth", 0}, \
-    {"\uf028", "Audio", "pactl set-sink-mute @DEFAULT_SINK@ toggle", "", 1}, \
     {"\uf072", "Air", "rfkill block all; bluetoothctl power off", "rfkill unblock all; sleep 1; bluetoothctl power on", 0}, \
-    {"\uf287", "Usb", "udisksctl unmount -b /dev/sda1; udisksctl power-off -b /dev/sda1", "", 1} \
+    {"\uf287", "Usb", "udisksctl unmount -b /dev/sda1; udisksctl power-off -b /dev/sda1", "", 1}, \
+    {"\uf03d", "Rec", "n=1; while [ -e ~/Videos/screenrecord_${n}.mkv ]; do n=$((n+1)); done; ffmpeg -video_size 1920x1080 -framerate 30 -f x11grab -i :0.0 ~/Videos/screenrecord_${n}.mkv & echo $! > /tmp/screenrec_pid", "kill $(cat /tmp/screenrec_pid); rm /tmp/screenrec_pid", 0} \
 }
 
-// Page 2: (empty)
+// Page 2: Development & Files
 #define PAGE_2_CONFIG { \
-    {"", "", "", "", 1}, \
-    {"", "", "", "", 1}, \
-    {"", "", "", "", 1}, \
-    {"", "", "", "", 1}, \
-    {"", "", "", "", 1} \
+    {"\uf121", "Code", "code ~/code", "", 1}, \
+    {"\uf489", "Term", "alacritty --working-directory ~/code", "", 1}, \
+    {"", "Discord", "discord", "", 1}, \
+    {"\uf1c0", "Files", "thunar ~/", "", 1}, \
+    {"\uf269", "Git", "lazygit", "", 1} \
 }
 
 // Button configuration helper
