@@ -3,6 +3,7 @@
 #include <X11/Xatom.h>
 #include <X11/extensions/shape.h>
 #include <X11/Xft/Xft.h>
+#include <X11/keysym.h>
 #include <fontconfig/fontconfig.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,15 +30,16 @@ typedef struct {
     Window root_window;
     GC gc;
     XftDraw *xft_draw;
-    XftFont *icon_font, *text_font;
+    XftFont *icon_font, *text_font, *page_font;
     XftColor xft_text_color, xft_active_text_color, xft_icon_color, xft_active_icon_color;
+    XftColor xft_page_color, xft_page_active_color;
     Colormap colormap;
     Visual *visual;
     int has_compositor;
     
     XColor bg_color, text_color, window_border_color, border_color, button_bg_color;
     XColor active_bg_color, active_text_color, active_border_color;
-    XColor pressed_bg_color;
+    XColor pressed_bg_color, page_color, page_active_color;
     
     int screen_width, screen_height;
     int current_x, target_x, hidden_x;
@@ -45,7 +47,9 @@ typedef struct {
     int needs_redraw;
     int frame_count;
     
-    Button buttons[BUTTON_COUNT];
+    int current_page;
+    int total_pages;
+    Button buttons[MAX_PAGES][BUTTONS_PER_PAGE];
 } Widget;
 
 // Function declarations
@@ -55,6 +59,7 @@ void start_close_animation(Widget *widget);
 void start_show_animation(Widget *widget);
 void draw_widget(Widget *widget);
 void draw_button(Widget *widget, int index);
+void draw_page_indicator(Widget *widget);
 void cleanup_widget(Widget *widget);
 int check_mouse_in_hover_zone(Widget *widget);
 int check_mouse_over_widget(Widget *widget);
@@ -64,6 +69,7 @@ void execute_command(const char *command);
 void init_buttons(Widget *widget);
 int get_button_at_position(Widget *widget, int x, int y);
 void toggle_button(Widget *widget, int button_index);
+void change_page(Widget *widget, int direction);
 void draw_text_centered_xft(Widget *widget, const char *text, int x, int y, int width, XftFont *font, XftColor *color);
 int check_compositor(Display *display);
 void set_window_opacity(Widget *widget, double opacity);
@@ -79,23 +85,45 @@ void execute_command(const char *command) {
 }
 
 void init_buttons(Widget *widget) {
-    const struct {
-        char icon[8];
-        char text[32];
-        char toggle_command[256];
-        char untoggle_command[256];
-        int click_only;
-    } button_configs[] = BUTTON_CONFIGS;
-    
-    for (int i = 0; i < BUTTON_COUNT; i++) {
-        strcpy(widget->buttons[i].icon, button_configs[i].icon);
-        strcpy(widget->buttons[i].text, button_configs[i].text);
-        strcpy(widget->buttons[i].toggle_command, button_configs[i].toggle_command);
-        strcpy(widget->buttons[i].untoggle_command, button_configs[i].untoggle_command);
-        widget->buttons[i].click_only = button_configs[i].click_only;
-        widget->buttons[i].is_active = 0;
-        widget->buttons[i].is_pressed = 0;
+    // Initialize all pages
+    for (int page = 0; page < MAX_PAGES; page++) {
+        for (int i = 0; i < BUTTONS_PER_PAGE; i++) {
+            // Clear button data
+            widget->buttons[page][i].icon[0] = '\0';
+            widget->buttons[page][i].text[0] = '\0';
+            widget->buttons[page][i].toggle_command[0] = '\0';
+            widget->buttons[page][i].untoggle_command[0] = '\0';
+            widget->buttons[page][i].click_only = 0;
+            widget->buttons[page][i].is_active = 0;
+            widget->buttons[page][i].is_pressed = 0;
+        }
     }
+    
+    // Load page configurations
+    for (int page = 0; page < MAX_PAGES; page++) {
+        const struct {
+            char icon[8];
+            char text[32];
+            char toggle_command[256];
+            char untoggle_command[256];
+            int click_only;
+        } *page_config = get_page_config(page);
+        
+        if (page_config) {
+            for (int i = 0; i < BUTTONS_PER_PAGE; i++) {
+                if (page_config[i].icon[0] != '\0') {
+                    strcpy(widget->buttons[page][i].icon, page_config[i].icon);
+                    strcpy(widget->buttons[page][i].text, page_config[i].text);
+                    strcpy(widget->buttons[page][i].toggle_command, page_config[i].toggle_command);
+                    strcpy(widget->buttons[page][i].untoggle_command, page_config[i].untoggle_command);
+                    widget->buttons[page][i].click_only = page_config[i].click_only;
+                }
+            }
+        }
+    }
+    
+    widget->current_page = DEFAULT_PAGE;
+    widget->total_pages = MAX_PAGES;
 }
 
 XColor parse_color(Widget *widget, const char *color_str) {
@@ -122,18 +150,23 @@ void setup_colors(Widget *widget) {
     widget->active_text_color = parse_color(widget, ACTIVE_TEXT_COLOR);
     widget->active_border_color = parse_color(widget, ACTIVE_BORDER_COLOR);
     widget->pressed_bg_color = parse_color(widget, PRESSED_BG_COLOR);
+    widget->page_color = parse_color(widget, PAGE_COLOR);
+    widget->page_active_color = parse_color(widget, PAGE_ACTIVE_COLOR);
     
     XftColorAllocName(widget->display, widget->visual, widget->colormap, TEXT_COLOR, &widget->xft_text_color);
     XftColorAllocName(widget->display, widget->visual, widget->colormap, ACTIVE_TEXT_COLOR, &widget->xft_active_text_color);
     XftColorAllocName(widget->display, widget->visual, widget->colormap, ICON_COLOR, &widget->xft_icon_color);
     XftColorAllocName(widget->display, widget->visual, widget->colormap, ACTIVE_ICON_COLOR, &widget->xft_active_icon_color);
+    XftColorAllocName(widget->display, widget->visual, widget->colormap, PAGE_COLOR, &widget->xft_page_color);
+    XftColorAllocName(widget->display, widget->visual, widget->colormap, PAGE_ACTIVE_COLOR, &widget->xft_page_active_color);
 }
 
 void setup_fonts(Widget *widget) {
-    char icon_pattern[256], text_pattern[256];
+    char icon_pattern[256], text_pattern[256], page_pattern[256];
     
     snprintf(icon_pattern, sizeof(icon_pattern), "%s:size=%d", ICON_FONT_NAME, ICON_FONT_SIZE);
     snprintf(text_pattern, sizeof(text_pattern), "%s:size=%d", TEXT_FONT_NAME, TEXT_FONT_SIZE);
+    snprintf(page_pattern, sizeof(page_pattern), "%s:size=%d", PAGE_FONT_NAME, PAGE_FONT_SIZE);
     
     widget->icon_font = XftFontOpenName(widget->display, DefaultScreen(widget->display), icon_pattern);
     if (!widget->icon_font)
@@ -143,7 +176,11 @@ void setup_fonts(Widget *widget) {
     if (!widget->text_font)
         widget->text_font = XftFontOpenName(widget->display, DefaultScreen(widget->display), "monospace:size=10");
     
-    if (!widget->icon_font || !widget->text_font)
+    widget->page_font = XftFontOpenName(widget->display, DefaultScreen(widget->display), page_pattern);
+    if (!widget->page_font)
+        widget->page_font = XftFontOpenName(widget->display, DefaultScreen(widget->display), "monospace:size=8");
+    
+    if (!widget->icon_font || !widget->text_font || !widget->page_font)
         exit(1);
 }
 
@@ -187,7 +224,19 @@ void init_widget(Widget *widget) {
     
     XSetWindowAttributes attrs;
     attrs.override_redirect = True;
-    XChangeWindowAttributes(widget->display, widget->window, CWOverrideRedirect, &attrs);
+    attrs.backing_store = Always;
+    attrs.save_under = True;
+    XChangeWindowAttributes(widget->display, widget->window, 
+                           CWOverrideRedirect | CWBackingStore | CWSaveUnder, &attrs);
+    
+    // Set WM hints to accept keyboard input
+    XWMHints *wm_hints = XAllocWMHints();
+    if (wm_hints) {
+        wm_hints->flags = InputHint;
+        wm_hints->input = True;
+        XSetWMHints(widget->display, widget->window, wm_hints);
+        XFree(wm_hints);
+    }
     
     XGCValues gc_values;
     gc_values.foreground = widget->text_color.pixel;
@@ -197,7 +246,9 @@ void init_widget(Widget *widget) {
     widget->xft_draw = XftDrawCreate(widget->display, widget->window, widget->visual, widget->colormap);
     
     XSelectInput(widget->display, widget->window, 
-                ExposureMask | ButtonPressMask | ButtonReleaseMask | StructureNotifyMask);
+                ExposureMask | ButtonPressMask | ButtonReleaseMask | 
+                KeyPressMask | KeyReleaseMask | EnterWindowMask | LeaveWindowMask |
+                PointerMotionMask | FocusChangeMask | StructureNotifyMask);
     
     XMapWindow(widget->display, widget->window);
     
@@ -299,7 +350,10 @@ void draw_text_centered_xft(Widget *widget, const char *text, int x, int y, int 
 }
 
 void draw_button(Widget *widget, int index) {
-    Button *button = &widget->buttons[index];
+    Button *button = &widget->buttons[widget->current_page][index];
+    
+    // Skip empty buttons
+    if (button->icon[0] == '\0') return;
     
     int button_x = WIDGET_PADDING;
     int button_y = WIDGET_PADDING + index * (BUTTON_SIZE + BUTTON_MARGIN);
@@ -345,6 +399,45 @@ void draw_button(Widget *widget, int index) {
     draw_text_centered_xft(widget, button->text, button_x, text_y, BUTTON_SIZE, widget->text_font, text_color);
 }
 
+void draw_page_indicator(Widget *widget) {
+    if (widget->total_pages <= 1) return;
+    
+    int indicator_y = WIDGET_HEIGHT - PAGE_INDICATOR_HEIGHT - WIDGET_PADDING;
+    int total_width = widget->total_pages * PAGE_DOT_SIZE + (widget->total_pages - 1) * PAGE_DOT_SPACING;
+    int start_x = (WIDGET_WIDTH - total_width) / 2;
+    
+    for (int i = 0; i < widget->total_pages; i++) {
+        int dot_x = start_x + i * (PAGE_DOT_SIZE + PAGE_DOT_SPACING);
+        int dot_center_x = dot_x + PAGE_DOT_SIZE / 2;
+        int dot_center_y = indicator_y + PAGE_DOT_SIZE / 2;
+        int radius = PAGE_DOT_SIZE / 2;
+        
+        XColor *color = (i == widget->current_page) ? &widget->page_active_color : &widget->page_color;
+        XSetForeground(widget->display, widget->gc, color->pixel);
+        
+        // Draw filled circle using XFillArc (360 degrees = 360 * 64 in X11)
+        XFillArc(widget->display, widget->window, widget->gc,
+                 dot_center_x - radius, dot_center_y - radius,
+                 PAGE_DOT_SIZE, PAGE_DOT_SIZE, 0, 360 * 64);
+        
+        // Add subtle border for inactive dots to make them more defined
+        if (i != widget->current_page) {
+            XSetForeground(widget->display, widget->gc, widget->border_color.pixel);
+            XDrawArc(widget->display, widget->window, widget->gc,
+                     dot_center_x - radius, dot_center_y - radius,
+                     PAGE_DOT_SIZE, PAGE_DOT_SIZE, 0, 360 * 64);
+        }
+    }
+    
+    // Draw page numbers with better styling
+    char page_text[16];
+    snprintf(page_text, sizeof(page_text), "%d/%d", widget->current_page + 1, widget->total_pages);
+    
+    XftColor *text_color = &widget->xft_page_color;
+    int text_y = indicator_y + PAGE_DOT_SIZE + 12;
+    draw_text_centered_xft(widget, page_text, 0, text_y, WIDGET_WIDTH, widget->page_font, text_color);
+}
+
 void draw_widget(Widget *widget) {
     if (!widget->needs_redraw) return;
     
@@ -355,9 +448,11 @@ void draw_widget(Widget *widget) {
     XFillRectangle(widget->display, widget->window, widget->gc,
                    0, 0, WIDGET_WIDTH, WIDGET_HEIGHT);
     
-    for (int i = 0; i < BUTTON_COUNT; i++) {
+    for (int i = 0; i < BUTTONS_PER_PAGE; i++) {
         draw_button(widget, i);
     }
+    
+    draw_page_indicator(widget);
     
     XFlush(widget->display);
     widget->needs_redraw = 0;
@@ -366,7 +461,7 @@ void draw_widget(Widget *widget) {
 int get_button_at_position(Widget *widget, int x, int y) {
     (void)widget;
     
-    for (int i = 0; i < BUTTON_COUNT; i++) {
+    for (int i = 0; i < BUTTONS_PER_PAGE; i++) {
         int button_x = WIDGET_PADDING;
         int button_y = WIDGET_PADDING + i * (BUTTON_SIZE + BUTTON_MARGIN);
         
@@ -379,9 +474,12 @@ int get_button_at_position(Widget *widget, int x, int y) {
 }
 
 void toggle_button(Widget *widget, int button_index) {
-    if (button_index < 0 || button_index >= BUTTON_COUNT) return;
+    if (button_index < 0 || button_index >= BUTTONS_PER_PAGE) return;
     
-    Button *button = &widget->buttons[button_index];
+    Button *button = &widget->buttons[widget->current_page][button_index];
+    
+    // Skip empty buttons
+    if (button->icon[0] == '\0') return;
     
     if (button->click_only) {
         // Click-only button: just execute the toggle command
@@ -395,22 +493,44 @@ void toggle_button(Widget *widget, int button_index) {
     widget->needs_redraw = 1;
 }
 
+void change_page(Widget *widget, int direction) {
+    int new_page = widget->current_page + direction;
+    
+    if (new_page < 0) {
+        new_page = widget->total_pages - 1;
+    } else if (new_page >= widget->total_pages) {
+        new_page = 0;
+    }
+    
+    if (new_page != widget->current_page) {
+        for (int i = 0; i < BUTTONS_PER_PAGE; i++) {
+            widget->buttons[widget->current_page][i].is_pressed = 0;
+        }
+        
+        widget->current_page = new_page;
+        widget->needs_redraw = 1;
+    }
+}
+
 void cleanup_widget(Widget *widget) {
     XftColorFree(widget->display, widget->visual, widget->colormap, &widget->xft_text_color);
     XftColorFree(widget->display, widget->visual, widget->colormap, &widget->xft_active_text_color);
     XftColorFree(widget->display, widget->visual, widget->colormap, &widget->xft_icon_color);
     XftColorFree(widget->display, widget->visual, widget->colormap, &widget->xft_active_icon_color);
+    XftColorFree(widget->display, widget->visual, widget->colormap, &widget->xft_page_color);
+    XftColorFree(widget->display, widget->visual, widget->colormap, &widget->xft_page_active_color);
     XftFontClose(widget->display, widget->icon_font);
     XftFontClose(widget->display, widget->text_font);
+    XftFontClose(widget->display, widget->page_font);
     XftDrawDestroy(widget->xft_draw);
     
     unsigned long pixels[] = {
         widget->bg_color.pixel, widget->text_color.pixel, widget->window_border_color.pixel, widget->border_color.pixel,
         widget->button_bg_color.pixel, widget->active_bg_color.pixel, 
         widget->active_text_color.pixel, widget->active_border_color.pixel,
-        widget->pressed_bg_color.pixel
+        widget->pressed_bg_color.pixel, widget->page_color.pixel, widget->page_active_color.pixel
     };
-    XFreeColors(widget->display, widget->colormap, pixels, 9, 0);
+    XFreeColors(widget->display, widget->colormap, pixels, 11, 0);
     
     XFreeGC(widget->display, widget->gc);
     XDestroyWindow(widget->display, widget->window);
@@ -438,6 +558,7 @@ void set_window_opacity(Widget *widget, double opacity) {
 int main() {
     Widget widget;
     XEvent event;
+    int has_focus = 0;
     
     init_widget(&widget);
     
@@ -450,16 +571,68 @@ int main() {
                 case Expose:
                     widget.needs_redraw = 1;
                     break;
+                
+                case EnterNotify:
+                    has_focus = 1;
+                    // Only grab focus when mouse actually enters
+                    XSetInputFocus(widget.display, widget.window, RevertToPointerRoot, CurrentTime);
+                    widget.needs_redraw = 1;
+                    break;
+                
+                case LeaveNotify:
+                    has_focus = 0;
+                    // Explicitly release focus back to the root window or previous window
+                    XSetInputFocus(widget.display, PointerRoot, RevertToPointerRoot, CurrentTime);
+                    widget.needs_redraw = 1;
+                    break;
+                
+                case FocusIn:
+                    has_focus = 1;
+                    break;
+                
+                case FocusOut:
+                    has_focus = 0;
+                    break;
+                
+                case MotionNotify:
+                    // More precise focus handling based on exact mouse position
+                    if (event.xmotion.x >= 0 && event.xmotion.x < WIDGET_WIDTH &&
+                        event.xmotion.y >= 0 && event.xmotion.y < WIDGET_HEIGHT) {
+                        if (!has_focus) {
+                            has_focus = 1;
+                            XSetInputFocus(widget.display, widget.window, RevertToPointerRoot, CurrentTime);
+                        }
+                    } else {
+                        if (has_focus) {
+                            has_focus = 0;
+                            XSetInputFocus(widget.display, PointerRoot, RevertToPointerRoot, CurrentTime);
+                        }
+                    }
+                    break;
                     
                 case ButtonPress:
+                    // Only grab focus if we're actually clicking on the widget
+                    if (event.xbutton.x >= 0 && event.xbutton.x < WIDGET_WIDTH &&
+                        event.xbutton.y >= 0 && event.xbutton.y < WIDGET_HEIGHT) {
+                        has_focus = 1;
+                        XSetInputFocus(widget.display, widget.window, RevertToPointerRoot, CurrentTime);
+                    }
+                    
                     if (event.xbutton.button == Button1) {
                         int button_index = get_button_at_position(&widget, 
                                                                   event.xbutton.x, 
                                                                   event.xbutton.y);
                         if (button_index >= 0) {
-                            widget.buttons[button_index].is_pressed = 1;
+                            widget.buttons[widget.current_page][button_index].is_pressed = 1;
                             widget.needs_redraw = 1;
                         }
+                    }
+                    // Scroll wheel support
+                    else if (event.xbutton.button == Button4) { // Scroll up
+                        change_page(&widget, -1);
+                    }
+                    else if (event.xbutton.button == Button5) { // Scroll down
+                        change_page(&widget, 1);
                     }
                     break;
                     
@@ -468,8 +641,8 @@ int main() {
                         int button_index = get_button_at_position(&widget, 
                                                                   event.xbutton.x, 
                                                                   event.xbutton.y);
-                        for (int i = 0; i < BUTTON_COUNT; i++) {
-                            widget.buttons[i].is_pressed = 0;
+                        for (int i = 0; i < BUTTONS_PER_PAGE; i++) {
+                            widget.buttons[widget.current_page][i].is_pressed = 0;
                         }
                         
                         if (button_index >= 0) {
@@ -478,6 +651,83 @@ int main() {
                         widget.needs_redraw = 1;
                     }
                     break;
+                
+                case KeyPress: {
+                    if (!has_focus) break;
+                    
+                    KeySym keysym = XLookupKeysym(&event.xkey, 0);
+                    
+                    if (SCROLL_DIRECTION) {
+                        switch (keysym) {
+                            case XK_Left:
+                            case XK_a:
+                            case XK_h:
+                                change_page(&widget, -1);
+                                break;
+                            case XK_Right:
+                            case XK_d:
+                            case XK_l:
+                                change_page(&widget, 1);
+                                break;
+                        }
+                    } else {
+                        switch (keysym) {
+                            case XK_Up:
+                            case XK_w:
+                            case XK_k:
+                                change_page(&widget, -1);
+                                break;
+                            case XK_Down:
+                            case XK_s:
+                            case XK_j:
+                                change_page(&widget, 1);
+                                break;
+                        }
+                    }
+                    
+                    switch (keysym) {
+                        case XK_Page_Up:
+                            change_page(&widget, -1);
+                            break;
+                        case XK_Page_Down:
+                            change_page(&widget, 1);
+                            break;
+                        case XK_Home:
+                            if (widget.current_page != 0) {
+                                widget.current_page = 0;
+                                widget.needs_redraw = 1;
+                            }
+                            break;
+                        case XK_End:
+                            if (widget.current_page != widget.total_pages - 1) {
+                                widget.current_page = widget.total_pages - 1;
+                                widget.needs_redraw = 1;
+                            }
+                            break;
+                        case XK_Escape:
+                            if (widget.is_visible) {
+                                start_close_animation(&widget);
+                            }
+                            break;
+                        case XK_1:
+                        case XK_2:
+                        case XK_3:
+                        case XK_4:
+                        case XK_5:
+                        case XK_6:
+                        case XK_7:
+                        case XK_8:
+                        case XK_9: {
+                            int page_num = keysym - XK_1;
+                            if (page_num < widget.total_pages && page_num != widget.current_page) {
+                                widget.current_page = page_num;
+                                widget.needs_redraw = 1;
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                }
                     
                 case ConfigureNotify:
                     if (widget.is_visible && !widget.is_closing) {
@@ -506,6 +756,11 @@ int main() {
             start_show_animation(&widget);
         } else if (!mouse_in_zone && !mouse_over_widget && widget.is_visible && !widget.is_closing) {
             widget.mouse_in_zone = 0;
+            // Release focus when hiding the widget
+            if (has_focus) {
+                has_focus = 0;
+                XSetInputFocus(widget.display, PointerRoot, RevertToPointerRoot, CurrentTime);
+            }
             start_close_animation(&widget);
         }
         

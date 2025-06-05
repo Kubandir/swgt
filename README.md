@@ -1,9 +1,14 @@
 # SWGT - Simple Widget
 
-A lightweight X11 widget that displays multiple toggleable buttons with custom icons and appears when the mouse cursor reaches the right edge of the screen.
+A lightweight X11 widget that displays multiple pages of toggleable buttons with custom icons and appears when the mouse cursor reaches the right edge of the screen.
 
 ## Features
 
+- **Multi-page support** with configurable navigation
+- **Smart input handling** - only captures keyboard input when mouse is over widget
+- **Arrow key navigation** between pages (Up/Down or Left/Right)
+- **Mouse wheel scrolling** support
+- **Configurable default page** that opens first
 - Slide-in animation from screen edge
 - Multiple toggleable buttons with custom icons and text
 - Each button executes different commands for on/off states
@@ -12,6 +17,25 @@ A lightweight X11 widget that displays multiple toggleable buttons with custom i
 - Configurable colors and fonts
 - Low resource usage
 - Customizable through config.h
+
+## Navigation
+
+### Keyboard Controls (only when mouse is over widget)
+- **Vertical mode (default)**: Up/Down arrows, W/S, K/J
+- **Horizontal mode**: Left/Right arrows, A/D, H/L
+- **Page Up/Down**: Navigate pages
+- **Home/End**: Jump to first/last page
+- **Number keys (1-9)**: Jump directly to specific pages
+- **Escape**: Close widget
+
+### Mouse Controls
+- **Click**: Toggle buttons
+- **Mouse wheel**: Scroll between pages
+- **Hover**: Show/hide widget
+
+## Input Handling
+
+The widget uses smart input handling that only captures keyboard events when your mouse cursor is over the widget window. This prevents it from interfering with other applications and ensures normal system behavior when the widget is not in use.
 
 ## Dependencies
 
@@ -67,12 +91,23 @@ make clean
 ## Configuration
 
 Edit `config.h` to customize:
-- Widget dimensions and colors (now using simple hex format)
+
+### Page Settings
+- `DEFAULT_PAGE`: Which page shows first (0-based)
+- `SCROLL_DIRECTION`: Set to `SCROLL_VERTICAL` or `SCROLL_HORIZONTAL`
+- `MAX_PAGES`: Number of pages
+- `BUTTONS_PER_PAGE`: Buttons per page
+
+### Appearance
+- Widget dimensions and colors (hex format)
 - Animation settings
-- Font preferences (now using modern Xft fonts)
-- Button count, icons, text, and commands
-- Individual button toggle/untoggle commands
-- Hover zone width for precise activation
+- Font preferences (Xft fonts)
+- Page indicator styling
+
+### Button Configuration
+- Icons, text, and commands for each page
+- Toggle/untoggle commands per button
+- Click-only vs toggle behavior
 
 ## Installation
 
@@ -91,4 +126,4 @@ Simply run the executable:
 ./swgt
 ```
 
-The widget will appear when you move your mouse to the designated hover zone at the right edge of the screen. The buttons are visible immediately during animation for better visual feedback. Click any button to toggle its state - buttons will change color and execute different commands based on their active/inactive state.
+The widget will appear when you move your mouse to the right edge of the screen. Navigate between pages using arrow keys, WASD/HJKL, or mouse wheel. The widget starts on the configured default page and supports both vertical and horizontal navigation modes.
