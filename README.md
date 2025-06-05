@@ -56,27 +56,9 @@ sudo pacman -S libx11 libxext libxft fontconfig base-devel
 
 ## Building
 
-### Quick Start
-```bash
-# Make build script executable
-chmod +x build.sh
-
-# Development build (fast compilation)
-./build.sh dev
-
-# Release build (optimized)
-./build.sh release
-
-# Clean build
-./build.sh --clean release
-```
-
-### Build Modes
-
 - **dev**: Fast compilation with debug symbols (`-g -O0`)
 - **release**: Maximum optimization (`-O3 -march=native -flto`)
 
-### Manual Building
 ```bash
 # Development
 make dev
@@ -113,7 +95,7 @@ Edit `config.h` to customize:
 
 ```bash
 # Build and install to /usr/local/bin
-make install
+make release install
 
 # Uninstall
 make uninstall
@@ -124,6 +106,10 @@ make uninstall
 Simply run the executable:
 ```bash
 ./swgt
+```
+Or if installed use:
+```bash
+swgt
 ```
 
 The widget will appear when you move your mouse to the right edge of the screen. Navigate between pages using arrow keys, WASD/HJKL, or mouse wheel. The widget starts on the configured default page and supports both vertical and horizontal navigation modes.

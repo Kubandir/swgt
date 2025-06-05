@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Very simple productivity timer script
+
 # File to store daily work time (this script itself)
 SCRIPT_FILE="/home/hoks/code/swgt/scripts/productivity.sh"
 STATE_MARKER="#__WORK_STATE__"
@@ -91,4 +93,4 @@ case "$1" in
 esac
 
 #__WORK_STATE__ 2024-06-11 0
-#__WORK_STATE__ 2025-06-05 1
+#__WORK_STATE__ 2025-06-05 5
