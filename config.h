@@ -9,7 +9,7 @@
 #define BORDER_WIDTH 2
 
 // Page settings (0 = vertical nav, 1 = horizontal nav)
-#define MAX_PAGES 3
+#define MAX_PAGES 2
 #define BUTTONS_PER_PAGE 5
 #define DEFAULT_PAGE 0
 #define SCROLL_DIRECTION 1
@@ -66,7 +66,7 @@
 #define PAGE_0_CONFIG { \
     {"\uf0f3", "Dnd", "pkill -SIGUSR1 dunst", "pkill -SIGUSR2 dunst", 0}, \
     {"\uf185", "Night", "redshift -O 3500", "redshift -x", 0}, \
-    {"\uf108", "Mirror", "xrandr --output HDMI-1 --same-as eDP-1 --mode 1920x1080", "", 1}, \
+    {"\uf017", "Timer", "~/code/swgt/scripts/timer.sh", "", 1}, \
     {"\uf0ae", "Work", "~/code/swgt/scripts/productivity.sh start", "~/code/swgt/scripts/productivity.sh stop", 0}, \
     {"\uf011", "Power", "~/code/swgt/scripts/power.sh", "", 1} \
 }
@@ -76,18 +76,10 @@
     {"\uf1eb", "Wifi", "nmcli radio wifi off", "nmcli radio wifi on", 0}, \
     {"\uf293", "Bt", "rfkill block bluetooth", "rfkill unblock bluetooth", 0}, \
     {"\uf072", "Air", "rfkill block all; bluetoothctl power off", "rfkill unblock all; sleep 1; bluetoothctl power on", 0}, \
-    {"\uf287", "Usb", "udisksctl unmount -b /dev/sda1; udisksctl power-off -b /dev/sda1", "", 1}, \
+    {"\uf108", "Mirror", "xrandr --output HDMI-1 --same-as eDP-1 --mode 1920x1080", "", 1}, \
     {"\uf03d", "Rec", "n=1; while [ -e ~/Videos/screenrecord_${n}.mkv ]; do n=$((n+1)); done; ffmpeg -video_size 1920x1080 -framerate 30 -f x11grab -i :0.0 ~/Videos/screenrecord_${n}.mkv & echo $! > /tmp/screenrec_pid", "kill $(cat /tmp/screenrec_pid); rm /tmp/screenrec_pid", 0} \
 }
 
-// Page 2: Development & Files
-#define PAGE_2_CONFIG { \
-    {"\uf121", "Code", "code ~/code", "", 1}, \
-    {"\uf489", "Term", "alacritty --working-directory ~/code", "", 1}, \
-    {"", "Discord", "discord", "", 1}, \
-    {"\uf1c0", "Files", "thunar ~/", "", 1}, \
-    {"\uf269", "Git", "lazygit", "", 1} \
-}
 
 // Button configuration helper
 static inline const void* get_page_config(int page) {
@@ -100,7 +92,6 @@ static inline const void* get_page_config(int page) {
     } page_configs[][BUTTONS_PER_PAGE] = {
         PAGE_0_CONFIG,
         PAGE_1_CONFIG, 
-        PAGE_2_CONFIG
     };
     
     return (page >= 0 && page < MAX_PAGES) ? page_configs[page] : NULL;
