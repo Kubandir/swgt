@@ -65,7 +65,7 @@
 // Page 0: System Controls
 #define PAGE_0_CONFIG { \
     {"\uf0f3", "Dnd", "pkill -SIGUSR1 dunst", "pkill -SIGUSR2 dunst", 0}, \
-    {"\uf185", "Night", "redshift -O 2000", "redshift -x", 0}, \
+    {"\uf185", "Night", "redshift -O 3500", "redshift -x", 0}, \
     {"\uf108", "Mirror", "xrandr --output HDMI-1 --same-as eDP-1 --mode 1920x1080", "", 1}, \
     {"\uf0ae", "Work", "~/code/swgt/scripts/productivity.sh start", "~/code/swgt/scripts/productivity.sh stop", 0}, \
     {"\uf011", "Power", "~/code/swgt/scripts/power.sh", "", 1} \
