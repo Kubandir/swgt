@@ -14,7 +14,7 @@ notify() {
 }
 
 is_running() {
-    [[ -f "$PID_FILE" ]] && kill-0 "$(cat "$PID_FILE")" 2>/dev/null
+    [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null
 }
 
 send_add_minute() {
@@ -33,35 +33,44 @@ start_daemon() {
     exec 3<>"$FIFO"
     seconds_left=60
     notify "Started for 1 minute."
-    last_notified_minutes=-1
 
+    # Event-driven loop: try to read a line for up to 1s; on timeout, tick 1s.
     while :; do
-        while IFS= read -r -t 0 -u 3 line; do
+        if IFS= read -r -t 1 -u 3 line 2>/dev/null; then
             case "$line" in
                 ADD\ *)
                     add="${line#ADD }"
                     [[ "$add" =~ ^[0-9]+$ ]] || add=0
                     seconds_left=$((seconds_left + add))
                     mins=$(( (seconds_left + 59) / 60 ))
-                    notify "Added $((add/60)) minute. $mins minute(s) remaining."
+                    notify "Added $((add/60)) minute(s). $mins minute(s) remaining."
                     ;;
                 RESET|STOP)
                     seconds_left=0
                     ;;
+                *)
+                    : # ignore
+                    ;;
             esac
-        done
+        else
+            # 1 second elapsed (read timed out)
+            if (( seconds_left <= 0 )); then
+                notify "Timer finished."
+                break
+            fi
 
-        if (( seconds_left <= 0 )); then
-            notify "Timer finished."
-            break
-        fi
+            seconds_left=$((seconds_left - 1))
+            if (( seconds_left <= 0 )); then
+                notify "Timer finished."
+                break
+            fi
 
-        sleep 1
-        seconds_left=$((seconds_left - 1))
-        mins=$(( (seconds_left + 59) / 60 ))
-        if (( seconds_left % 60 == 0 )) && (( mins != last_notified_minutes )) && (( mins > 0 )); then
-            notify "$mins minute(s) remaining..."
-            last_notified_minutes=$mins
+            if (( seconds_left % 60 == 0 )); then
+                mins=$(( (seconds_left + 59) / 60 ))
+                if (( mins > 0 )); then
+                    notify "Remaining: $mins minute(s)"
+                fi
+            fi
         fi
     done
 }
