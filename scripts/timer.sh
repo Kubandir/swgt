@@ -6,7 +6,6 @@ PID_FILE="/tmp/swgt_timer.pid"
 FIFO="/tmp/swgt_timer.fifo"
 
 notify() {
-    # Prefer dunstify if present, fallback to notify-send
     if command -v dunstify >/dev/null 2>&1; then
         dunstify "$APP_NAME" "$1"
     else
@@ -19,7 +18,6 @@ is_running() {
 }
 
 send_add_minute() {
-    # Adds 60 seconds to the running timer
     if [[ -p "$FIFO" ]]; then
         printf 'ADD 60\n' > "$FIFO" || true
     else
@@ -30,20 +28,14 @@ send_add_minute() {
 start_daemon() {
     echo $$ > "$PID_FILE"
     trap 'rm -f "$PID_FILE" "$FIFO"; exit 0' INT TERM EXIT
-
-    # Ensure FIFO exists (recreate if needed)
     rm -f "$FIFO"
     mkfifo -m 600 "$FIFO"
-
-    # Open FIFO RDWR so writers never block on open
     exec 3<>"$FIFO"
-
     seconds_left=60
     notify "Started for 1 minute."
     last_notified_minutes=-1
 
     while :; do
-        # Drain any pending commands without blocking
         while IFS= read -r -t 0 -u 3 line; do
             case "$line" in
                 ADD\ *)
@@ -66,8 +58,6 @@ start_daemon() {
 
         sleep 1
         seconds_left=$((seconds_left - 1))
-
-        # Notify each minute boundary, but never for 0 minutes remaining
         mins=$(( (seconds_left + 59) / 60 ))
         if (( seconds_left % 60 == 0 )) && (( mins != last_notified_minutes )) && (( mins > 0 )); then
             notify "$mins minute(s) remaining..."
@@ -76,13 +66,10 @@ start_daemon() {
     done
 }
 
-# Main entry
 if is_running; then
-    # Already running: just add one minute
     send_add_minute
     exit 0
 fi
 
-# Clean stale state if any and start fresh 1-minute timer
 rm -f "$PID_FILE"
 start_daemon

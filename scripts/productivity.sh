@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Very simple productivity timer script
-
-# File to store daily work time (this script itself)
 SCRIPT_FILE="/home/hoks/code/swgt/scripts/productivity.sh"
 STATE_MARKER="#__WORK_STATE__"
 
@@ -15,7 +12,6 @@ get_today() {
 }
 
 get_today_minutes() {
-    # Extract today's minutes from the script file
     local today=$(get_today)
     awk -v marker="$STATE_MARKER" -v today="$today" '
         $0 ~ marker {
@@ -26,7 +22,6 @@ get_today_minutes() {
 }
 
 set_today_minutes() {
-    # Update today's minutes in the script file
     local today=$(get_today)
     local minutes="$1"
     local tmpfile=$(mktemp)
